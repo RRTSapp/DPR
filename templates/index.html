@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar DPR Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #1a2744;
+    --blue:   #2563eb;
+    --blue2:  #1d4ed8;
+    --orange: #f97316;
+    --green:  #16a34a;
+    --bg:     #f1f5f9;
+    --card:   #ffffff;
+    --border: #e2e8f0;
+    --text:   #1e293b;
+    --muted:  #64748b;
+    --input-bg: #f8fafc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, #0f2050 60%, #1e3a5f 100%);
+    padding: 2rem 2rem 1.8rem;
+    position: relative; overflow: hidden;
+  }
+  .header::after {
+    content: '☀'; position: absolute; right: 3rem; top: 50%;
+    transform: translateY(-50%);
+    font-size: 5rem; opacity: 0.08; pointer-events: none;
+  }
+  .header h1 { font-family: 'Space Grotesk', sans-serif; color: #fff; font-size: 1.9rem; font-weight: 700; line-height: 1.2; }
+  .header p  { color: #94a3b8; font-size: 0.9rem; margin-top: 0.4rem; }
+  .header .badge {
+    display: inline-block; background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.4);
+    color: #fb923c; font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.7rem;
+    border-radius: 20px; margin-top: 0.7rem; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.6rem 1.8rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--blue); margin-bottom: 1.2rem;
+    padding-bottom: 0.7rem; border-bottom: 2px solid var(--blue);
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .card-title .icon { font-size: 1rem; }
+
+  /* ── Form sections ── */
+  .section-divider {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin: 1.4rem 0 0.9rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Form fields ── */
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .row.full  { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 0.35rem; }
+  label { font-size: 0.77rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  label .unit { font-weight: 400; color: #94a3b8; text-transform: none; }
+  input[type=text], input[type=number], select {
+    background: var(--input-bg); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 0.52rem 0.75rem;
+    font-size: 0.9rem; font-family: 'Inter', sans-serif; color: var(--text);
+    transition: border-color .15s, box-shadow .15s; outline: none; width: 100%;
+  }
+  input:focus, select:focus {
+    border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+  }
+  input[readonly] { background: #f1f5f9; color: var(--muted); cursor: default; }
+
+  /* ── Sticky sidebar ── */
+  .sidebar { position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  /* ── Preview card ── */
+  .preview-card { background: var(--navy); border-radius: 14px; padding: 1.5rem; color: #e2e8f0; }
+  .preview-card h3 {
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.78rem;
+    text-transform: uppercase; letter-spacing: 0.1em; color: #64748b;
+    margin-bottom: 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid #1e3a5f;
+  }
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .kpi {
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px; padding: 0.8rem 0.9rem;
+  }
+  .kpi .label { font-size: 0.68rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.25rem; }
+  .kpi .value { font-family: 'Space Grotesk', sans-serif; font-size: 1.35rem; font-weight: 700; color: #f8fafc; }
+  .kpi .value.green  { color: #4ade80; }
+  .kpi .value.orange { color: #fb923c; }
+  .kpi .value.blue   { color: #60a5fa; }
+  .kpi .value.yellow { color: #fbbf24; }
+
+  /* ── Calc btn ── */
+  .btn-calc {
+    width: 100%; padding: 0.65rem; border-radius: 8px;
+    background: rgba(37,99,235,.15); border: 1px solid rgba(37,99,235,.3);
+    color: #60a5fa; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: all .2s; letter-spacing: 0.03em;
+  }
+  .btn-calc:hover { background: rgba(37,99,235,.25); }
+
+  /* ── Generate btn ── */
+  .btn-generate {
+    width: 100%; padding: 0.9rem; border-radius: 10px;
+    background: linear-gradient(135deg, var(--orange), #ea580c);
+    border: none; color: #fff; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all .2s; letter-spacing: 0.02em;
+    box-shadow: 0 4px 14px rgba(249,115,22,.3);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(249,115,22,.4); }
+  .btn-generate:active { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* ── Info box ── */
+  .info-box {
+    background: rgba(37,99,235,.06); border: 1px solid rgba(37,99,235,.15);
+    border-radius: 10px; padding: 0.9rem 1rem; font-size: 0.8rem;
+    color: var(--muted); line-height: 1.6;
+  }
+  .info-box strong { color: var(--blue); }
+
+  /* ── Spinner ── */
+  .spinner { display: none; text-align: center; padding: 1rem; color: #94a3b8; font-size: 0.85rem; }
+  .spinner.show { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin-icon { display: inline-block; animation: spin 1s linear infinite; margin-right: 0.4rem; }
+
+  /* ── Status messages ── */
+  .status { display: none; padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 500; margin-top: 0.5rem; }
+  .status.error { display: block; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #ef4444; }
+  .status.success { display: block; background: rgba(22,163,74,.1); border: 1px solid rgba(22,163,74,.3); color: #16a34a; }
+
+  /* ── Responsive ── */
+  @media (max-width: 820px) {
+    .grid { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .row, .row.three { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>☀️ Solar DPR Generator</h1>
+  <p>Detailed Project Report for Grid-Connected Solar PV Power Projects</p>
+  <div class="badge">Auto-generates 30+ page Word document</div>
+</div>
+
+<div class="container">
+<form id="dprForm" action="/generate" method="POST">
+<div class="grid">
+
+  <!-- ════════════════════════ LEFT: FORM ════════════════════════ -->
+  <div>
+
+    <!-- Company Details -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🏢</span> Company Details</div>
+
+      <div class="row full">
+        <div class="field">
+          <label>Full Company Name</label>
+          <input type="text" name="company_name" value="Esveen Energy Private Limited" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Short Name / Abbreviation</label>
+          <input type="text" name="company_short" value="EEPL" required>
+        </div>
+        <div class="field">
+          <label>Registered Address</label>
+          <input type="text" name="company_address" value="95 Developed Plot, Industrial Estate, Perungudi, Chennai-600096">
+        </div>
+      </div>
+
+      <div class="section-divider">Parent / Promoter Companies</div>
+      <div class="row three">
+        <div class="field">
+          <label>Parent Company 1</label>
+          <input type="text" name="parent1_name" value="SIASPL">
+        </div>
+        <div class="field">
+          <label>Shareholding <span class="unit">%</span></label>
+          <input type="number" name="parent1_pct" value="50" min="1" max="99">
+        </div>
+        <div class="field" style="justify-content:flex-end">
+          <!-- spacer row for alignment -->
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>Parent Company 2</label>
+          <input type="text" name="parent2_name" value="AGPPL">
+        </div>
+        <div class="field">
+          <label>Shareholding <span class="unit">%</span></label>
+          <input type="number" name="parent2_pct" value="50" min="1" max="99">
+        </div>
+        <div class="field"></div>
+      </div>
+    </div>
+
+    <!-- Project Details -->
+    <div class="card" style="margin-top:1.2rem">
+      <div class="card-title"><span class="icon">⚡</span> Project Details</div>
+
+      <div class="row three">
+        <div class="field">
+          <label>Capacity AC <span class="unit">MW</span></label>
+          <input type="number" name="project_capacity_ac" id="cap_ac" value="20" step="0.5" min="1" oninput="calcDC()">
+        </div>
+        <div class="field">
+          <label>AC:DC Ratio</label>
+          <input type="number" name="ac_dc_ratio" id="ac_dc" value="1.4" step="0.05" min="1" oninput="calcDC()">
+        </div>
+        <div class="field">
+          <label>DC Capacity <span class="unit">MWp (auto)</span></label>
+          <input type="number" id="dc_display" value="28.0" readonly>
+        </div>
+      </div>
+
+      <div class="section-divider">Location</div>
+      <div class="row three">
+        <div class="field">
+          <label>Village / Location</label>
+          <input type="text" name="location_village" value="Vembakkam" required>
+        </div>
+        <div class="field">
+          <label>Taluk</label>
+          <input type="text" name="location_taluk" value="Cheyyar">
+        </div>
+        <div class="field">
+          <label>District</label>
+          <input type="text" name="location_district" value="Tiruvannamalai" required>
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>State</label>
+          <input type="text" name="location_state" value="Tamil Nadu">
+        </div>
+        <div class="field">
+          <label>Latitude</label>
+          <input type="text" name="latitude" value="12°45' N">
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="text" name="longitude" value="79°34' E">
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>Land Required <span class="unit">Acres</span></label>
+          <input type="number" name="land_acres" value="60" step="1">
+        </div>
+        <div class="field">
+          <label>Nearest Town</label>
+          <input type="text" name="nearest_town" value="Cheyyar">
+        </div>
+        <div class="field">
+          <label>Distance to Town <span class="unit">km</span></label>
+          <input type="number" name="nearest_town_km" value="15" step="0.5">
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>TNEB SS Distance <span class="unit">km</span></label>
+          <input type="number" name="tneb_distance_km" value="4.5" step="0.5">
+        </div>
+        <div class="field">
+          <label>COD Month</label>
+          <select name="cod_month">
+            <option>January</option><option>February</option><option selected>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>COD Year</label>
+          <input type="number" name="cod_year" value="2027" min="2024" max="2035">
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Inputs -->
+    <div class="card" style="margin-top:1.2rem">
+      <div class="card-title"><span class="icon">💰</span> Financial Parameters</div>
+
+      <div class="section-divider">Project Cost & Funding</div>
+      <div class="row three">
+        <div class="field">
+          <label>Total Project Cost <span class="unit">₹ Cr</span></label>
+          <input type="number" name="project_cost_cr" id="proj_cost" value="120" step="0.5" oninput="calcFinancials()">
+        </div>
+        <div class="field">
+          <label>Debt % <span class="unit">of cost</span></label>
+          <input type="number" name="debt_pct" id="debt_pct" value="80" step="1" min="50" max="90" oninput="calcFinancials()">
+        </div>
+        <div class="field">
+          <label>Equity % <span class="unit">(auto)</span></label>
+          <input type="number" id="equity_pct_display" value="20" readonly>
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>Debt <span class="unit">₹ Cr (auto)</span></label>
+          <input type="number" id="debt_cr_display" value="96" readonly>
+        </div>
+        <div class="field">
+          <label>Interest Rate <span class="unit">% p.a.</span></label>
+          <input type="number" name="debt_interest_rate" id="int_rate" value="8.0" step="0.25" min="5" max="15" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>Debt Tenor <span class="unit">Years</span></label>
+          <input type="number" name="debt_tenor_yrs" id="debt_tenor" value="13" step="1" min="5" max="20" oninput="triggerPreview()">
+        </div>
+      </div>
+
+      <div class="section-divider">PPA Terms</div>
+      <div class="row three">
+        <div class="field">
+          <label>PPA Tariff <span class="unit">₹/unit</span></label>
+          <input type="number" name="ppa_tariff" id="ppa_tariff" value="4.80" step="0.05" min="2" max="10" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>PPA Term <span class="unit">Years</span></label>
+          <input type="number" name="ppa_term" id="ppa_term" value="25" step="1" min="15" max="30" oninput="triggerPreview()">
+        </div>
+        <div class="field"></div>
+      </div>
+    </div>
+
+    <!-- Generation & O&M -->
+    <div class="card" style="margin-top:1.2rem">
+      <div class="card-title"><span class="icon">📊</span> Generation & O&M Assumptions</div>
+
+      <div class="section-divider">Solar Generation</div>
+      <div class="row three">
+        <div class="field">
+          <label>Year 1 Yield <span class="unit">Lac U/MWac</span></label>
+          <input type="number" name="gen_yr1_lac_per_mwac" id="gen_yr1" value="21.5" step="0.1" min="15" max="30" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>Degradation Yr1 <span class="unit">%</span></label>
+          <input type="number" name="degradation_yr1_pct" id="deg1" value="1.0" step="0.1" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>Degradation Yr2+ <span class="unit">%/yr</span></label>
+          <input type="number" name="degradation_yr2_pct" id="deg2" value="0.4" step="0.05" oninput="triggerPreview()">
+        </div>
+      </div>
+
+      <div class="section-divider">O&M & Insurance</div>
+      <div class="row three">
+        <div class="field">
+          <label>O&M Year 1</label>
+          <select name="om_yr1_free" id="om_free" onchange="triggerPreview()">
+            <option value="yes" selected>Free (EPC warranty)</option>
+            <option value="no">Charged</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>O&M Rate <span class="unit">₹ Lac/MWac</span></label>
+          <input type="number" name="om_rate_lac_per_mwac" id="om_rate" value="4.0" step="0.25" min="1" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>O&M Escalation <span class="unit">% p.a.</span></label>
+          <input type="number" name="om_escalation_pct" id="om_esc" value="5.0" step="0.5" oninput="triggerPreview()">
+        </div>
+      </div>
+      <div class="row three">
+        <div class="field">
+          <label>Insurance <span class="unit">% of cost</span></label>
+          <input type="number" name="insurance_pct" id="ins_pct" value="0.10" step="0.01" oninput="triggerPreview()">
+        </div>
+        <div class="field">
+          <label>Ins. Escalation <span class="unit">% p.a.</span></label>
+          <input type="number" name="insurance_esc_pct" id="ins_esc" value="1.0" step="0.5" oninput="triggerPreview()">
+        </div>
+        <div class="field"></div>
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- ════════════════════════ RIGHT: SIDEBAR ════════════════════════ -->
+  <div class="sidebar">
+
+    <!-- Live Preview -->
+    <div class="preview-card">
+      <h3>📈 Financial Preview</h3>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="label">Project IRR</div>
+          <div class="value green" id="kpi_proj_irr">–</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Equity IRR</div>
+          <div class="value orange" id="kpi_eq_irr">–</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Min DSCR</div>
+          <div class="value blue" id="kpi_min_dscr">–</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Avg DSCR</div>
+          <div class="value yellow" id="kpi_avg_dscr">–</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Yr1 Revenue</div>
+          <div class="value" id="kpi_revenue" style="font-size:1rem">–</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Yr1 EBITDA</div>
+          <div class="value" id="kpi_ebitda" style="font-size:1rem">–</div>
+        </div>
+      </div>
+      <button type="button" class="btn-calc" style="margin-top:1rem" onclick="fetchPreview()">
+        ⟳ Recalculate
+      </button>
+      <div class="spinner" id="calc_spinner"><span class="spin-icon">⟳</span> Calculating…</div>
+    </div>
+
+    <!-- Generate Button -->
+    <div class="card">
+      <button type="submit" class="btn-generate" id="genBtn">
+        ⬇ Generate DPR (.docx)
+      </button>
+      <div class="spinner" id="gen_spinner" style="margin-top:0.5rem">
+        <span class="spin-icon">⟳</span> Generating report…
+      </div>
+      <div class="status" id="gen_status"></div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      <strong>What gets generated:</strong><br>
+      A complete <strong>30–35 page Word document</strong> including cover page, index,
+      company profile, site details, system description, BOQ, project schedule,
+      25-year cash flow, debt schedule, DSCR analysis, conclusion, and PVSyst annexure.
+      <br><br>
+      <strong>Tip:</strong> Click Recalculate to verify IRR/DSCR before generating.
+    </div>
+
+  </div><!-- /sidebar -->
+
+</div><!-- /grid -->
+</form>
+</div><!-- /container -->
+
+<script>
+  // ── Auto-derive DC capacity ──────────────────────────────────────
+  function calcDC() {
+    const ac = parseFloat(document.getElementById('cap_ac').value) || 0;
+    const r  = parseFloat(document.getElementById('ac_dc').value)  || 1.4;
+    document.getElementById('dc_display').value = (ac * r).toFixed(1);
+    triggerPreview();
+  }
+
+  // ── Auto-derive equity/debt ──────────────────────────────────────
+  function calcFinancials() {
+    const cost    = parseFloat(document.getElementById('proj_cost').value) || 0;
+    const debtPct = parseFloat(document.getElementById('debt_pct').value)  || 80;
+    const eqPct   = 100 - debtPct;
+    document.getElementById('equity_pct_display').value = eqPct.toFixed(0);
+    document.getElementById('debt_cr_display').value    = (cost * debtPct / 100).toFixed(2);
+    triggerPreview();
+  }
+
+  // ── Debounced preview trigger ────────────────────────────────────
+  let previewTimer;
+  function triggerPreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(fetchPreview, 800);
+  }
+
+  // ── Live preview via /preview endpoint ──────────────────────────
+  function fetchPreview() {
+    const form = document.getElementById('dprForm');
+    const data = new FormData(form);
+    document.getElementById('calc_spinner').classList.add('show');
+
+    fetch('/preview', { method: 'POST', body: data })
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('calc_spinner').classList.remove('show');
+        if (d.error) return;
+        document.getElementById('kpi_proj_irr').textContent = d.project_irr.toFixed(2) + '%';
+        document.getElementById('kpi_eq_irr').textContent   = d.equity_irr.toFixed(2)  + '%';
+        document.getElementById('kpi_min_dscr').textContent = d.min_dscr.toFixed(2)    + 'x';
+        document.getElementById('kpi_avg_dscr').textContent = d.avg_dscr.toFixed(2)    + 'x';
+        document.getElementById('kpi_revenue').textContent  = '₹ ' + d.yr1_revenue.toFixed(0) + ' L';
+        document.getElementById('kpi_ebitda').textContent   = '₹ ' + d.yr1_ebitda.toFixed(0)  + ' L';
+      })
+      .catch(() => document.getElementById('calc_spinner').classList.remove('show'));
+  }
+
+  // ── Form submit → download ───────────────────────────────────────
+  document.getElementById('dprForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn    = document.getElementById('genBtn');
+    const spin   = document.getElementById('gen_spinner');
+    const status = document.getElementById('gen_status');
+    btn.disabled = true;
+    btn.textContent = '⟳ Generating…';
+    spin.classList.add('show');
+    status.className = 'status';
+
+    fetch('/generate', { method: 'POST', body: new FormData(this) })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Server error');
+        }
+        return res.blob();
+      })
+      .then(blob => {
+        const url  = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const short = document.querySelector('[name=company_short]').value || 'DPR';
+        const cap   = document.getElementById('cap_ac').value || '20';
+        link.href     = url;
+        link.download = `DPR_${short}_${cap}MW.docx`;
+        link.click();
+        URL.revokeObjectURL(url);
+        status.className  = 'status success';
+        status.textContent = '✓ DPR downloaded successfully!';
+      })
+      .catch(err => {
+        status.className  = 'status error';
+        status.textContent = '✗ Error: ' + err.message;
+      })
+      .finally(() => {
+        btn.disabled    = false;
+        btn.textContent = '⬇ Generate DPR (.docx)';
+        spin.classList.remove('show');
+      });
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────
+  calcDC();
+  calcFinancials();
+  fetchPreview();
+</script>
+</body>
+</html>
