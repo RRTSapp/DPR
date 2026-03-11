@@ -5,14 +5,26 @@ Accepts a params dict, returns bytes.
 """
 
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor, Inches
+from docx.shared import Pt, Cm, RGBColor, Inches, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import copy
 import io
+import os
 from financial_model import run_model
+
+# ── Image paths ──────────────────────────────────────────────────────────────
+_HERE = os.path.dirname(os.path.abspath(__file__))
+IMAGES = {
+    "cover":           os.path.join(_HERE, "static", "images", "img_cover.jpeg"),
+    "basic_concept":   os.path.join(_HERE, "static", "images", "img_basic_concept.jpeg"),
+    "solar_radiation": os.path.join(_HERE, "static", "images", "img_solar_radiation.jpeg"),
+    "location_map":    os.path.join(_HERE, "static", "images", "img_location_map.png"),
+    "vicinity_map":    os.path.join(_HERE, "static", "images", "img_vicinity_map.png"),
+    "district_map":    os.path.join(_HERE, "static", "images", "img_district_map.jpeg"),
+}
 
 # ── Colour palette ──────────────────────────────────────────────────────────
 C_NAVY   = RGBColor(0x1F, 0x38, 0x64)
@@ -149,6 +161,50 @@ def page_break(doc):
     doc.add_page_break()
 
 
+def add_image(doc, key, width_cm, height_cm=None, caption=None,
+              align=WD_ALIGN_PARAGRAPH.CENTER, user_path=None):
+    """
+    Add an image. Resolution order:
+      1. user_path  – uploaded by user (highest priority)
+      2. IMAGES[key] – bundled default image
+      3. Placeholder text if neither found
+    """
+    path = None
+    if user_path and os.path.exists(str(user_path)):
+        path = user_path
+    if not path:
+        default = IMAGES.get(key, "")
+        if default and os.path.exists(default):
+            path = default
+    if not path:
+        pp = doc.add_paragraph(f"[Figure: {key} – image not available]")
+        pp.alignment = align
+        pp.paragraph_format.space_after = Pt(4)
+        for run in pp.runs:
+            run.italic = True
+            run.font.color.rgb = RGBColor(0x99, 0x99, 0x99)
+            run.font.size = Pt(9)
+        return pp
+    pp = doc.add_paragraph()
+    pp.alignment = align
+    pp.paragraph_format.space_before = Pt(4)
+    pp.paragraph_format.space_after  = Pt(2)
+    run = pp.add_run()
+    if height_cm:
+        run.add_picture(path, width=Cm(width_cm), height=Cm(height_cm))
+    else:
+        run.add_picture(path, width=Cm(width_cm))
+    if caption:
+        cp = doc.add_paragraph(caption)
+        cp.alignment = align
+        cp.paragraph_format.space_after = Pt(8)
+        for r in cp.runs:
+            r.italic = True
+            r.font.size = Pt(9)
+            r.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+    return pp
+
+
 # ── Main generator ────────────────────────────────────────────────────────────
 def generate_dpr(params: dict) -> bytes:
     m = run_model(params)
@@ -211,6 +267,8 @@ def generate_dpr(params: dict) -> bytes:
         run.font.color.rgb = col
         run.font.name = "Arial"
 
+    add_image(doc, "cover", width_cm=15.9, height_cm=10.1, user_path=p.get("img_cover"))
+
     page_break(doc)
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -246,35 +304,106 @@ def generate_dpr(params: dict) -> bytes:
     # SECTION 1 – COMPANY SUMMARY
     # ══════════════════════════════════════════════════════════════════════════
     add_heading(doc, "1. SUMMARY OF THE COMPANY")
-    para_run(doc, f"{p['company_name']} ({p['company_short']}) is a renewable energy focused Independent Power Producer (IPP), "
-             f"incorporated as a joint venture subsidiary with equal participation from {p['parent1_name']} ({p['parent1_pct']:.0f}%) "
-             f"and {p['parent2_name']} ({p['parent2_pct']:.0f}%).", space_after=8)
-    para_run(doc, f"Registered at: {p['company_address']}", space_after=8)
-    para_run(doc, f"{p['company_short']} is established with a clear vision to develop, own, and operate utility-scale solar power assets "
-             f"in India. The company intends to develop a {f2(p['project_capacity_ac'])} MW AC ({f2(p['project_capacity_dc'])} MWp DC) "
-             f"ground-mounted Solar Power Project at {p['location_village']}, {p['location_district']} District, {p['location_state']}. "
-             f"The power generated will be sold under a {p['ppa_term']}-year PPA at a flat tariff of "
-             f"₹ {p['ppa_tariff']:.2f} per unit. COD is planned for {p['cod_month']} {p['cod_year']}.", space_after=8)
-    para_run(doc, f"{p['company_short']} combines the engineering and financial strength of its parent companies, "
-             f"positioning it as a well-funded and technically capable developer for this project.", space_after=10)
 
+    # ── About the Project Company ────────────────────────────────────────────
+    parent_str = f"{p['parent1_name']} ({p['parent1_pct']:.0f}%) and {p['parent2_name']} ({p['parent2_pct']:.0f}%)"
+    co_type = p.get("company_type", "SPV") or "SPV"
+    co_year = f", incorporated in {p['company_year']}" if p.get("company_year") else ""
+    para_run(doc, f"{p['company_name']} ({p['company_short']}) is a {co_type}{co_year}, "
+             f"jointly promoted by {parent_str}.", space_after=8)
+    para_run(doc, f"Registered Address: {p['company_address']}", space_after=8)
+    if p.get("company_about"):
+        para_run(doc, p["company_about"], space_after=8)
+    else:
+        para_run(doc, f"{p['company_short']} is established with a clear vision to develop, own, and operate "
+                 f"utility-scale solar power assets in India. The company is developing a "
+                 f"{f2(p['project_capacity_ac'])} MW AC ({f2(p['project_capacity_dc'])} MWp DC) "
+                 f"Ground Mounted Solar PV Power Project at {p['location_village']}, "
+                 f"{p['location_district']} District, {p['location_state']}. "
+                 f"The power will be sold under a {p['ppa_term']}-year PPA at ₹ {p['ppa_tariff']:.2f}/unit. "
+                 f"COD is planned for {p['cod_month']} {p['cod_year']}.", space_after=8)
+    para_run(doc, f"{p['company_short']} combines the strengths of its promoter group, positioning it as a "
+             "well-funded and technically capable developer for this project.", space_after=10)
+
+    # ── Group Profile ────────────────────────────────────────────────────────
     add_heading(doc, "Group Profile", level=2)
-    add_heading(doc, f"I. {p['parent1_name']}", level=3)
-    para_run(doc, f"{p['parent1_name']} is one of the promoter entities holding {p['parent1_pct']:.0f}% equity in {p['company_short']}. "
-             "The company brings significant financial strength, industry relationships, and execution capabilities to the project. "
-             "Its participation ensures robust corporate governance and long-term commitment to the success of the project.", space_after=8)
 
-    add_heading(doc, f"II. {p['parent2_name']}", level=3)
-    para_run(doc, f"{p['parent2_name']} holds {p['parent2_pct']:.0f}% equity in {p['company_short']}. "
-             "The company contributes renewable energy project development expertise, EPC execution capability, and operational "
-             "experience in solar and wind power assets, ensuring the project is developed and managed to the highest standards.", space_after=8)
+    def _write_parent(roman, name, pct, year, about, revenue, portfolio, vision):
+        add_heading(doc, f"{roman}. {name}", level=3)
+        yr_str = f", founded in {year}" if year else ""
+        para_run(doc, f"{name}{yr_str} holds {pct:.0f}% equity in {p['company_short']}.", space_after=6)
+        if about:
+            para_run(doc, about, space_after=6)
+        else:
+            para_run(doc, f"{name} is a promoter entity that brings financial strength, industry relationships, "
+                     "and execution capabilities to the project.", space_after=6)
+        if revenue:
+            para_run(doc, f"Annual Revenue: {revenue}", bold=True, space_after=4)
+        if portfolio:
+            add_heading(doc, "Portfolio / Key Capabilities", level=3)
+            for line in portfolio.split("\n"):
+                line = line.strip(" -•·")
+                if line:
+                    add_bullet(doc, line)
+        if vision:
+            para_run(doc, f"Vision: {vision}", italic=True, space_after=8)
 
+    _write_parent("I",  p["parent1_name"], p["parent1_pct"],
+                  p.get("parent1_year",""), p.get("parent1_about",""),
+                  p.get("parent1_revenue",""), p.get("parent1_portfolio",""),
+                  p.get("parent1_vision",""))
+    _write_parent("II", p["parent2_name"], p["parent2_pct"],
+                  p.get("parent2_year",""), p.get("parent2_about",""),
+                  p.get("parent2_revenue",""), p.get("parent2_portfolio",""),
+                  p.get("parent2_vision",""))
+
+    # ── Group Vision & Mission ───────────────────────────────────────────────
     add_heading(doc, "Group Vision & Mission", level=2)
-    para_run(doc, "Vision: To build a globally respected clean energy platform delivering reliable, sustainable, and "
-             "technology-driven solutions that support the world's transition to a low-carbon future.", space_after=6)
-    para_run(doc, "Mission: To create long-term value by combining engineering excellence, innovation, and disciplined "
-             "execution in renewable energy businesses, delivering efficient and sustainable solutions worldwide.", space_after=10)
+    vision_txt  = p.get("group_vision")  or "To build a globally respected clean energy platform delivering reliable, sustainable, and technology-driven solutions that support the world's transition to a low-carbon future."
+    mission_txt = p.get("group_mission") or "To create long-term value by combining engineering excellence, innovation, and disciplined execution in renewable energy businesses, delivering efficient and sustainable solutions worldwide."
+    para_run(doc, f"Vision: {vision_txt}",  space_after=6)
+    para_run(doc, f"Mission: {mission_txt}", space_after=10)
     page_break(doc)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SECTION 1A – EPC CONTRACTOR (OPTIONAL)
+    # ══════════════════════════════════════════════════════════════════════════
+    if p.get("epc_include"):
+        add_heading(doc, "1A. ABOUT THE EPC CONTRACTOR")
+        epc_name  = p.get("epc_name",  "EPC Contractor")
+        epc_short = p.get("epc_short", epc_name)
+        epc_yr    = f", established in {p['epc_year']}" if p.get("epc_year") else ""
+        para_run(doc, f"The Engineering, Procurement and Construction (EPC) for the {f2(p['project_capacity_ac'])} MW "
+                 f"Solar Power Project will be undertaken by M/s. {epc_name} ({epc_short}){epc_yr}.", space_after=8)
+        if p.get("epc_address"):
+            para_run(doc, f"Registered Address: {p['epc_address']}", space_after=8)
+        if p.get("epc_about"):
+            para_run(doc, p["epc_about"], space_after=8)
+        else:
+            para_run(doc, f"{epc_short} is a leading EPC contractor specialising in utility-scale solar PV projects. "
+                     "The company has a proven track record of delivering high-quality solar projects on time and "
+                     "within budget, with end-to-end capabilities covering design, procurement, civil and electrical "
+                     "works, testing, and commissioning.", space_after=8)
+
+        add_heading(doc, "Key Credentials", level=2)
+        epc_rows = []
+        if p.get("epc_experience"):
+            epc_rows.append(["Years of Experience", p["epc_experience"]])
+        if p.get("epc_mw_executed"):
+            epc_rows.append(["Total MW Executed", p["epc_mw_executed"]])
+        if p.get("epc_certifications"):
+            epc_rows.append(["Certifications", p["epc_certifications"]])
+        if epc_rows:
+            add_table(doc, ["Parameter", "Details"], epc_rows, col_widths_cm=[5, 10])
+
+        if p.get("epc_projects"):
+            add_heading(doc, "Notable Projects", level=2)
+            for line in p["epc_projects"].split("\n"):
+                line = line.strip(" -•·")
+                if line:
+                    add_bullet(doc, line)
+
+        page_break(doc)
 
     # ══════════════════════════════════════════════════════════════════════════
     # SECTION 2 – PROPOSAL
@@ -320,8 +449,9 @@ def generate_dpr(params: dict) -> bytes:
              f"{p['ppa_term']}-year flat-rate Power Purchase Agreement (PPA) at ₹ {p['ppa_tariff']:.2f} per unit. "
              "Under the PPA model, the Solar Generation Plant supplies power into the nearest power grid, "
              "which is then credited against the energy consumption of the identified consumer locations.", space_after=8)
-    para_run(doc, "[Basic Concept Diagram – Insert here]", italic=True,
-             color=RGBColor(0x88,0x88,0x88), space_after=8)
+    add_image(doc, "basic_concept", width_cm=14.8, height_cm=13.0,
+              caption="Figure: Basic Concept of Solar Power Sale / Captive Wheeling",
+              user_path=p.get("img_basic_concept"))
     para_run(doc, "The Solar Generation Plant supplies energy into the Nearest Power Grid (Meter Reading 4). "
              "This energy is deducted from the EB bills of the consumers, adjusting the energy cost against "
              f"the solar generator. Consumers receive solar power at ₹ {p['ppa_tariff']:.2f} per unit – "
@@ -377,6 +507,9 @@ def generate_dpr(params: dict) -> bytes:
         r2 = pp.add_run(defn)
         r2.font.size = Pt(10.5); r2.font.name = "Arial"
 
+    add_image(doc, "solar_radiation", width_cm=15.3, height_cm=6.9,
+              caption="Figure: Solar Radiation Map – Tamil Nadu Region",
+              user_path=p.get("img_solar_radiation"))
     para_run(doc, "Detailed site-specific solar resource assessment and PVSyst simulation are provided in Annexure – A.",
              italic=True, color=RGBColor(0x55,0x55,0x55), space_after=10)
     page_break(doc)
@@ -388,8 +521,15 @@ def generate_dpr(params: dict) -> bytes:
     para_run(doc, f"The proposed site is located at {p['location_village']} Village, {p['location_taluk']} Taluk, "
              f"{p['location_district']} District, {p['location_state']}. The site is approximately "
              f"{p['nearest_town_km']:.0f} km from {p['nearest_town']} and is well connected by road.", space_after=8)
-    para_run(doc, "[Site Location Maps – Insert district map, village map, and satellite imagery here]",
-             italic=True, color=RGBColor(0x88,0x88,0x88), space_after=8)
+    add_image(doc, "location_map", width_cm=15.3, height_cm=13.8,
+              caption="Figure 1.1: Location Map – " + p["location_village"] + ", " + p["location_district"] + " District",
+              user_path=p.get("img_location"))
+    add_image(doc, "vicinity_map", width_cm=15.3, height_cm=11.9,
+              caption="Figure 1.2: Project Site Vicinity Map",
+              user_path=p.get("img_vicinity"))
+    add_image(doc, "district_map", width_cm=15.3, height_cm=13.2,
+              caption="Figure 1.3: District Map of " + p["location_district"] + " – Proposed Project Site",
+              user_path=p.get("img_district"))
 
     add_heading(doc, "Site Details", level=2)
     site_rows = [
