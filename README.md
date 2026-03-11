@@ -138,13 +138,13 @@ Then place your logo at `static/logo.png`.
 
 | Field | Example |
 |---|---|
-| Company Name | Esveen Energy Private Limited |
+| Company Name | XYZ Private Limited |
 | Capacity (AC) | 20 MW |
-| Location | Vembakkam, Tiruvannamalai, Tamil Nadu |
+| Location | XX Village, yyy District, Tamil Nadu |
 | Project Cost | ₹ 120 Crores |
 | PPA Tariff | ₹ 4.80/unit |
-| Debt % | 80% |
-| Interest Rate | 8.0% p.a. |
+| Debt % | 70% |
+| Interest Rate | 9.0% p.a. |
 
 All other fields have sensible defaults.
 
