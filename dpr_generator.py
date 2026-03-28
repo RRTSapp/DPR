@@ -25,13 +25,25 @@ def has_parent2(p):
 
 # ── Image paths ──────────────────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Bundled default images (fallback when no custom image is uploaded)
+_DEFAULT_IMAGES = {
+    "img_cover":          os.path.join(_HERE, "static", "images", "img_cover.jpeg"),
+    "img_basic_concept":  os.path.join(_HERE, "static", "images", "img_basic_concept.jpeg"),
+    "img_solar_radiation":os.path.join(_HERE, "static", "images", "img_solar_radiation.jpeg"),
+    "img_location":       os.path.join(_HERE, "static", "images", "img_location_map.png"),
+    "img_vicinity":       os.path.join(_HERE, "static", "images", "img_vicinity_map.png"),
+    "img_district":       os.path.join(_HERE, "static", "images", "img_district_map.jpeg"),
+}
+
+# Legacy alias so existing call sites still work
 IMAGES = {
-    "cover":           os.path.join(_HERE, "static", "images", "img_cover.jpeg"),
-    "basic_concept":   os.path.join(_HERE, "static", "images", "img_basic_concept.jpeg"),
-    "solar_radiation": os.path.join(_HERE, "static", "images", "img_solar_radiation.jpeg"),
-    "location_map":    os.path.join(_HERE, "static", "images", "img_location_map.png"),
-    "vicinity_map":    os.path.join(_HERE, "static", "images", "img_vicinity_map.png"),
-    "district_map":    os.path.join(_HERE, "static", "images", "img_district_map.jpeg"),
+    "cover":           _DEFAULT_IMAGES["img_cover"],
+    "basic_concept":   _DEFAULT_IMAGES["img_basic_concept"],
+    "solar_radiation": _DEFAULT_IMAGES["img_solar_radiation"],
+    "location_map":    _DEFAULT_IMAGES["img_location"],
+    "vicinity_map":    _DEFAULT_IMAGES["img_vicinity"],
+    "district_map":    _DEFAULT_IMAGES["img_district"],
 }
 
 # ── Colours (matching template) ───────────────────────────────────────────────
@@ -134,8 +146,33 @@ def h3(doc, text, size_pt=12):
 def page_break(doc):
     doc.add_page_break()
 
-def add_image(doc, key, width_cm, height_cm=None, cap_text=None):
-    path = IMAGES.get(key, "")
+# Mapping: legacy IMAGES key  ->  params key  ->  default key
+_IMG_PARAMS_KEY = {
+    "cover":           "img_cover",
+    "basic_concept":   "img_basic_concept",
+    "solar_radiation": "img_solar_radiation",
+    "location_map":    "img_location",
+    "vicinity_map":    "img_vicinity",
+    "district_map":    "img_district",
+}
+
+def add_image(doc, key, width_cm, height_cm=None, cap_text=None, params=None):
+    """Insert an image. Prefers custom upload from params, falls back to bundled default."""
+    path = None
+
+    # 1. Check if a custom upload was provided via params
+    if params:
+        param_key = _IMG_PARAMS_KEY.get(key)
+        if param_key:
+            uploaded = params.get(param_key)
+            if uploaded and os.path.exists(str(uploaded)):
+                path = str(uploaded)
+
+    # 2. Fall back to bundled default
+    if not path:
+        default_key = _IMG_PARAMS_KEY.get(key)
+        path = _DEFAULT_IMAGES.get(default_key, IMAGES.get(key, ""))
+
     if path and os.path.exists(path):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -147,7 +184,7 @@ def add_image(doc, key, width_cm, height_cm=None, cap_text=None):
         else:
             r.add_picture(path, width=Cm(width_cm))
     else:
-        p = normal_para(doc, f"[Image: {key} – not found]",
+        p = normal_para(doc, f"[Image: {key} - not found]",
                         italic=True, color=RGBColor(0x99,0x99,0x99), size_pt=9)
     if cap_text:
         caption(doc, cap_text)
@@ -262,7 +299,7 @@ def generate_dpr(params: dict) -> bytes:
         return pp
 
     cline("DETAILED PROJECT REPORT (DPR)", 20, bold=True, col=C_NAVY, sa=12, sb=24)
-    add_image(doc, "cover", width_cm=15.9, height_cm=10.1)
+    add_image(doc, "cover", width_cm=15.9, height_cm=10.1, params=p)
     cline(f"DEVELOPMENT OF {f2(cap_dc)} MWp DC / {f2(cap_ac)} MW AC", 17, bold=True, sa=6, sb=6)
     cline("GROUND MOUNTED SOLAR PV POWER PROJECT", 14, bold=True, sa=4)
     cline(f"AT {p['location_village'].upper()} VILLAGE", 13, bold=True, col=C_ORANGE, sa=4)
@@ -442,7 +479,7 @@ def generate_dpr(params: dict) -> bytes:
     normal_para(doc, "Under the PPA model, the solar generation plant supplies power into the nearest power grid, "
                 "which is then credited against the energy consumption of the identified consumer locations. "
                 "The basic concept is illustrated in the diagram below:", space_after_pt=5, space_before_pt=3)
-    add_image(doc, "basic_concept", width_cm=14.8, height_cm=13.0)
+    add_image(doc, "basic_concept", width_cm=14.8, height_cm=13.0, params=p)
     caption(doc, "Figure: Basic Concept of Solar Power Sale / Captive Wheeling")
     normal_para(doc, "As illustrated in the diagram above, the Existing Power Supply Network (ESCOM) currently "
                 "supplies power to multiple consumer locations (Consumer Location 1, 2, 3, etc.), each metered "
@@ -570,7 +607,7 @@ def generate_dpr(params: dict) -> bytes:
         r2 = pp.add_run(defn)
         r2.font.size = Pt(10); r2.font.name = "Arial"
 
-    add_image(doc, "solar_radiation", width_cm=15.3, height_cm=6.9)
+    add_image(doc, "solar_radiation", width_cm=15.3, height_cm=6.9, params=p)
     caption(doc, "Figure: Solar Radiation Map – Tamil Nadu Region")
 
     h2(doc, "Solar Energy Generation – Key Metrics for the Project Site")
@@ -602,11 +639,11 @@ def generate_dpr(params: dict) -> bytes:
                 f"from {p['nearest_town']} Town and is well connected by road.",
                 space_after_pt=5, space_before_pt=3)
 
-    add_image(doc, "location_map", width_cm=15.3, height_cm=13.8)
+    add_image(doc, "location_map", width_cm=15.3, height_cm=13.8, params=p)
     caption(doc, f"Figure 1.1: Location Map – {p['location_village']}, {p['location_district']} District")
-    add_image(doc, "vicinity_map", width_cm=15.3, height_cm=11.9)
+    add_image(doc, "vicinity_map", width_cm=15.3, height_cm=11.9, params=p)
     caption(doc, "Figure 1.2: Project Site Vicinity Map")
-    add_image(doc, "district_map", width_cm=15.3, height_cm=13.2)
+    add_image(doc, "district_map", width_cm=15.3, height_cm=13.2, params=p)
     caption(doc, f"Figure 1.3: District Map of {p['location_district']} – Proposed Project Site")
 
     h2(doc, "Site Introduction")
