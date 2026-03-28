@@ -220,24 +220,25 @@
       <div class="row three">
         <div class="field">
           <label>Parent Company 1</label>
-          <input type="text" name="parent1_name" value="SIASPL">
+          <input type="text" name="parent1_name" id="parent1_name" value="SIASPL">
         </div>
         <div class="field">
           <label>Shareholding <span class="unit">%</span></label>
-          <input type="number" name="parent1_pct" value="50" min="1" max="99">
+          <input type="number" name="parent1_pct" id="parent1_pct" value="50" min="1" max="100" oninput="syncParent2Pct()">
         </div>
-        <div class="field" style="justify-content:flex-end">
-          <!-- spacer row for alignment -->
+        <div class="field" style="justify-content:flex-end;align-items:flex-end;padding-bottom:4px">
+          <small id="pct_hint" style="color:#6b7280;font-size:11px">Remainder auto-fills Parent 2</small>
         </div>
       </div>
-      <div class="row three">
+      <div class="row three" id="parent2_row">
         <div class="field">
-          <label>Parent Company 2</label>
-          <input type="text" name="parent2_name" value="AGPPL">
+          <label>Parent Company 2 <span style="color:#6b7280;font-size:11px">(optional)</span></label>
+          <input type="text" name="parent2_name" id="parent2_name" value="AGPPL" placeholder="Leave blank if sole owner">
         </div>
         <div class="field">
           <label>Shareholding <span class="unit">%</span></label>
-          <input type="number" name="parent2_pct" value="50" min="1" max="99">
+          <input type="number" name="parent2_pct" id="parent2_pct" value="50" min="0" max="99" readonly
+                 style="background:#f1f5f9;cursor:default" title="Auto-calculated as 100 minus Parent 1 %">
         </div>
         <div class="field"></div>
       </div>
@@ -543,6 +544,27 @@
 </div><!-- /container -->
 
 <script>
+  // ── Shareholding sync – allow 100% single owner ───────────────────────────
+  function syncParent2Pct() {
+    const p1 = parseFloat(document.getElementById('parent1_pct').value) || 0;
+    const p2 = Math.max(0, Math.round((100 - p1) * 10) / 10);
+    document.getElementById('parent2_pct').value = p2;
+    const row  = document.getElementById('parent2_row');
+    const hint = document.getElementById('pct_hint');
+    if (p1 >= 100) {
+      row.style.opacity = '0.35';
+      row.style.pointerEvents = 'none';
+      document.getElementById('parent2_name').placeholder = 'Not applicable (100% owned)';
+      hint.textContent = '100% single owner \u2013 no Partner 2 required';
+    } else {
+      row.style.opacity = '1';
+      row.style.pointerEvents = '';
+      document.getElementById('parent2_name').placeholder = 'Leave blank if sole owner';
+      hint.textContent = 'Remainder auto-fills Parent 2';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', syncParent2Pct);
+
   // ── Auto-derive DC capacity ──────────────────────────────────────
   function calcDC() {
     const ac = parseFloat(document.getElementById('cap_ac').value) || 0;
