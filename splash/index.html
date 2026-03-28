@@ -1,1 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar DPR Generator — Loading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
+<style>
+  :root {
+    --navy:   #1F3864;
+    --blue:   #2E74B5;
+    --gold:   #C9A227;
+    --cream:  #F5F0E8;
+    --light:  #EBF3FB;
+    --white:  #FFFFFF;
+    --text:   #1a2a3a;
+    --muted:  #7a8fa6;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Atmospheric background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 110%, rgba(46,116,181,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% -10%,  rgba(201,162,39,0.15) 0%, transparent 55%),
+      radial-gradient(ellipse 100% 80% at 50% 50%,  rgba(31,56,100,1) 0%, #0d1f35 100%);
+    z-index: 0;
+  }
+
+  /* ── Grid texture overlay ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2rem;
+    max-width: 560px;
+    width: 100%;
+  }
+
+  /* ── Sun animation ── */
+  .sun-wrap {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 2rem;
+  }
+
+  .sun {
+    width: 52px;
+    height: 52px;
+    background: radial-gradient(circle at 40% 40%, #FFD966, var(--gold));
+    border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 24px rgba(201,162,39,0.7), 0 0 60px rgba(201,162,39,0.3);
+    animation: pulse-sun 2.4s ease-in-out infinite;
+  }
+
+  .rays {
+    width: 88px;
+    height: 88px;
+    position: absolute;
+    top: 0; left: 0;
+    animation: spin-rays 8s linear infinite;
+  }
+
+  .ray {
+    position: absolute;
+    width: 3px;
+    height: 14px;
+    background: linear-gradient(to bottom, var(--gold), transparent);
+    border-radius: 2px;
+    left: calc(50% - 1.5px);
+    transform-origin: 50% 44px;
+    opacity: 0.75;
+  }
+
+  @keyframes pulse-sun {
+    0%, 100% { box-shadow: 0 0 24px rgba(201,162,39,0.7), 0 0 60px rgba(201,162,39,0.3); transform: translate(-50%,-50%) scale(1); }
+    50%       { box-shadow: 0 0 36px rgba(201,162,39,0.9), 0 0 80px rgba(201,162,39,0.4); transform: translate(-50%,-50%) scale(1.07); }
+  }
+  @keyframes spin-rays {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* ── Typography ── */
+  .wordmark {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    color: var(--white);
+    margin-bottom: 0.35rem;
+    animation: fade-up 0.7s ease both;
+    animation-delay: 0.1s;
+  }
+
+  .wordmark span {
+    color: var(--gold);
+  }
+
+  .tagline {
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 2.8rem;
+    animation: fade-up 0.7s ease both;
+    animation-delay: 0.22s;
+  }
+
+  /* ── Progress bar ── */
+  .progress-wrap {
+    width: 280px;
+    margin: 0 auto 1.2rem;
+    animation: fade-up 0.7s ease both;
+    animation-delay: 0.35s;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--blue), var(--gold));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+  }
+
+  /* ── Status dots ── */
+  .status-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 2.8rem;
+    min-height: 1.4rem;
+    animation: fade-up 0.7s ease both;
+    animation-delay: 0.45s;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.25; transform: scale(1); }
+    40%            { opacity: 1;    transform: scale(1.4); }
+  }
+
+  /* ── Pill badge ── */
+  .badge-row {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fade-up 0.7s ease both;
+    animation-delay: 0.55s;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 100px;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--gold);
+    opacity: 0.8;
+  }
+
+  /* ── Footer note ── */
+  .footer-note {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.08em;
+    z-index: 1;
+    white-space: nowrap;
+  }
+
+  /* ── Keyframes ── */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Ready state ── */
+  .ready-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--navy);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .ready-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .ready-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    animation: pulse-sun 1.5s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- Animated sun icon -->
+  <div class="sun-wrap">
+    <div class="rays" id="rays"></div>
+    <div class="sun"></div>
+  </div>
+
+  <div class="wordmark">Solar DPR <span>Generator</span></div>
+  <div class="tagline">Detailed Project Reports · Instant · Professional</div>
+
+  <!-- Progress bar -->
+  <div class="progress-wrap">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">Waking up the server…</div>
+  </div>
+
+  <!-- Animated status message -->
+  <div class="status-line">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <span id="statusMsg">Allocating compute resources</span>
+  </div>
+
+  <!-- Feature badges -->
+  <div class="badge-row">
+    <div class="badge"><span class="badge-dot"></span>20 MW Solar DPR</div>
+    <div class="badge"><span class="badge-dot"></span>IRR &amp; DSCR Model</div>
+    <div class="badge"><span class="badge-dot"></span>Word Export</div>
+    <div class="badge"><span class="badge-dot"></span>Solar + BESS</div>
+  </div>
+
+</div>
+
+<div class="footer-note">Free tier · First load takes ~30 seconds</div>
+
+<div class="ready-overlay" id="readyOverlay">
+  <div class="ready-text">✦ Ready — opening app…</div>
+</div>
+
+<script>
+  // ── Build sun rays ────────────────────────────────────────────────────────
+  const raysEl = document.getElementById('rays');
+  for (let i = 0; i < 12; i++) {
+    const r = document.createElement('div');
+    r.className = 'ray';
+    r.style.transform = `rotate(${i * 30}deg)`;
+    raysEl.appendChild(r);
+  }
+
+  // ── CONFIGURATION — set your Render URL here ──────────────────────────────
+  const APP_URL = 'https://solar-dpr-generator.onrender.com';
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const messages = [
+    'Allocating compute resources',
+    'Starting the instance',
+    'Loading Python environment',
+    'Initialising Flask application',
+    'Warming up the DPR engine',
+    'Almost there',
+  ];
+
+  const statusEl   = document.getElementById('statusMsg');
+  const fillEl     = document.getElementById('progressFill');
+  const labelEl    = document.getElementById('progressLabel');
+  const overlay    = document.getElementById('readyOverlay');
+
+  let msgIdx    = 0;
+  let progress  = 4;
+  let attempts  = 0;
+  const MAX_WAIT = 90;   // seconds before giving up and redirecting anyway
+
+  // Advance status messages every ~6 s
+  const msgTimer = setInterval(() => {
+    msgIdx = Math.min(msgIdx + 1, messages.length - 1);
+    statusEl.textContent = messages[msgIdx];
+  }, 6000);
+
+  // Smooth progress bar (never reaches 100 until confirmed ready)
+  const progTimer = setInterval(() => {
+    const target = Math.min(progress + (Math.random() * 3 + 1), 92);
+    progress = target;
+    fillEl.style.width = progress + '%';
+  }, 1800);
+
+  // Poll the app via a no-cors fetch (just needs to not throw a network error)
+  async function checkReady() {
+    attempts++;
+    if (attempts * 3 > MAX_WAIT) {
+      // Give up and redirect anyway
+      redirect();
+      return;
+    }
+    try {
+      // Use no-cors so CORS headers don't block us; we just need it to respond
+      await fetch(APP_URL, { mode: 'no-cors', cache: 'no-store' });
+      // If we get here without a network error the server is up
+      appIsReady();
+    } catch {
+      // Still loading — try again
+      setTimeout(checkReady, 3000);
+    }
+  }
+
+  function appIsReady() {
+    clearInterval(msgTimer);
+    clearInterval(progTimer);
+    fillEl.style.width = '100%';
+    labelEl.textContent = 'App is ready!';
+    statusEl.textContent = 'Opening your app now';
+
+    setTimeout(() => {
+      overlay.classList.add('show');
+      setTimeout(redirect, 600);
+    }, 500);
+  }
+
+  function redirect() {
+    window.location.href = APP_URL;
+  }
+
+  // Start polling after 2 s
+  setTimeout(checkReady, 2000);
+</script>
+</body>
+</html>
