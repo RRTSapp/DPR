@@ -44,7 +44,7 @@ def collect_params() -> dict:
         "parent1_vision":      g("parent1_vision", "").strip(),
 
         "parent2_name":        g("parent2_name", "").strip(),
-        "parent2_pct":         float(g("parent2_pct", 50)),
+        "parent2_pct":         float(g("parent2_pct", 0)),
         "parent2_year":        g("parent2_year", "").strip(),
         "parent2_about":       g("parent2_about", "").strip(),
         "parent2_revenue":     g("parent2_revenue", "").strip(),
@@ -104,6 +104,16 @@ def collect_params() -> dict:
     }
 
     # Derived
+    # Shareholding: clamp parent1 to 100 max, auto-fill parent2 as remainder
+    p1 = min(float(params["parent1_pct"]), 100.0)
+    params["parent1_pct"] = p1
+    params["parent2_pct"] = round(100.0 - p1, 1)
+    # If parent2 has 0% or no name, mark as sole owner
+    if p1 >= 100 or not params["parent2_name"]:
+        params["parent2_name"] = ""
+        params["parent1_pct"]  = 100.0
+        params["parent2_pct"]  = 0.0
+
     params["project_capacity_dc"] = round(params["project_capacity_ac"] * params["ac_dc_ratio"], 2)
     params["project_cost_lac"]    = params["project_cost_cr"] * 100
     params["debt_lac"]            = params["project_cost_lac"] * params["debt_pct"] / 100
@@ -183,5 +193,4 @@ def preview():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
